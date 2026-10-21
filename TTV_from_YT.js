@@ -318,9 +318,12 @@
         small.textContent = `${c.owner} · match ${Math.round(c.score)}%`;
         b.appendChild(small);
 
+        const videoId = c.id;
+        const input = urlInput;
+
         b.addEventListener('click', () => {
-          urlInput.value = `https://www.youtube.com/watch?v=${c.id}`;
-          startVideo(c.id);
+          input.value = `https://www.youtube.com/watch?v=${videoId}`;
+          startVideo(videoId);
         });
 
         results.appendChild(b);
@@ -480,13 +483,24 @@
     setStatus('Requested a seek toward the live edge. YouTube may not support this for every stream.');
   }
 
+
   function makeUI() {
-    if (document.getElementById(`${PREFIX}-toolbar`)) return;
+    // Prevent duplicate toolbars during Twitch page updates.
+    const existing = document.getElementById(`${PREFIX}-toolbar`);
+    if (existing) {
+      toolbar = existing;
+      return;
+    }
 
-    const host = document.querySelector('[data-a-target="video-player"]')?.parentElement
-      || document.querySelector('.channel-root__player')
-      || document.querySelector('main');
+    const player = document.querySelector('[data-a-target="video-player"]');
 
+    // Insert the toolbar BEFORE the player wrapper, not inside it.
+    const anchor =
+      player?.closest('.channel-root__player') ||
+      player?.parentElement?.parentElement ||
+      player;
+
+    const host = anchor?.parentElement || document.querySelector('main');
     if (!host) return;
 
     toolbar = document.createElement('div');
@@ -537,8 +551,14 @@
     results.id = `${PREFIX}-results`;
 
     toolbar.append(discoverBtn, urlInput, go, sync, restore, status, results);
-    host.insertBefore(toolbar, host.firstChild);
+
+    if (anchor && anchor.parentElement === host) {
+      host.insertBefore(toolbar, anchor);
+    } else {
+      host.insertBefore(toolbar, host.firstChild);
+    }
   }
+
 
   function handleNavigation() {
     if (location.href === lastUrl) return;
